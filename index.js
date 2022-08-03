@@ -62,7 +62,12 @@ app.post("/api/register", function (req, res) {
         }
         res.status(200).json({
           success: true,
-          rider: {firstname:doc.firstname,lastname:doc.lastname,email:doc.email,mobile:doc.mobile},
+          rider: {
+            firstname: doc.firstname,
+            lastname: doc.lastname,
+            email: doc.email,
+            mobile: doc.mobile,
+          },
         });
       });
     });
@@ -78,7 +83,7 @@ app.post("/api/register", function (req, res) {
       vehicleno: req.body.vehicleno,
       latitude: "",
       longitude: "",
-      available: "yes",
+      available: "no",
     });
 
     //console.log(testrider);
@@ -94,7 +99,13 @@ app.post("/api/register", function (req, res) {
         }
         res.status(200).json({
           succes: true,
-          driver: {firstname:doc.firstname,lastname:doc.lastname,email:doc.email,mobile:doc.mobile,vehicleno:doc.vehicleno},
+          driver: {
+            firstname: doc.firstname,
+            lastname: doc.lastname,
+            email: doc.email,
+            mobile: doc.mobile,
+            vehicleno: doc.vehicleno,
+          },
         });
       });
     });
@@ -214,23 +225,19 @@ app.post("/api/driver/availability", driverauth.auth, function (req, res) {
   );
 });
 
-app.post("/api/driver/location",driverauth.auth,function(req,res){
-    const email = req.body.email;
-    const latitude = req.body.latitude;
-    const longitude = req.body.longitude;
+app.post("/api/driver/location", driverauth.auth, function (req, res) {
+  const email = req.body.email;
+  const latitude = req.body.latitude;
+  const longitude = req.body.longitude;
 
-    Driver.findOneAndUpdate(
-        { email: email },
-        { latitude: latitude,
-            longitude:longitude
-         },
-        function (err, doc) {
-          if (err) return res.status(400).send(err);
-          res.sendStatus(200);
-        }
-      );
-
-
+  Driver.findOneAndUpdate(
+    { email: email },
+    { latitude: latitude, longitude: longitude },
+    function (err, doc) {
+      if (err) return res.status(400).send(err);
+      res.sendStatus(200);
+    }
+  );
 });
 
 app.post("/api/rider/book", riderauth.auth, function (req, res) {
@@ -238,9 +245,9 @@ app.post("/api/rider/book", riderauth.auth, function (req, res) {
   const start_location = req.body.start_location;
   const end_location = req.body.end_location;
   const cabType = req.body.cabtype;
-  console.log(email + start_location+end_location);
+  console.log(email + start_location + end_location);
   var basefare = 0.0;
-  var perkmprice = 0.0; 
+  var perkmprice = 0.0;
   var kms = 0.0;
   var price = 0.0;
 
@@ -248,31 +255,30 @@ app.post("/api/rider/book", riderauth.auth, function (req, res) {
     if (err) return res.status(400).send(err);
     basefare = cab.basefare;
     perkmprice = cab.perkmprice;
-    console.log(basefare+' '+ perkmprice);
+    console.log(basefare + " " + perkmprice);
     kms = Math.floor(Math.random() * 25);
     price = basefare;
-  
-  if(kms > 4){
-    price = price + (kms - 4) * perkmprice;
-  }
 
-  const newtrip = new Trips({
-    driver_email: "",
-    rider_email: email,
-    start_location: start_location,
-    end_location : end_location,
-    status: "waiting",
-    price: price,
-  });
+    if (kms > 4) {
+      price = price + (kms - 4) * perkmprice;
+    }
 
-  Trips.create(newtrip, function (err, temps) {
-    if (err) return res.status(400).send(err);
-    res.status(200).json({
-        "price":price,
-        "rideid":temps._id
+    const newtrip = new Trips({
+      driver_email: "",
+      rider_email: email,
+      start_location: start_location,
+      end_location: end_location,
+      status: "waiting",
+      price: price,
     });
-  });
 
+    Trips.create(newtrip, function (err, temps) {
+      if (err) return res.status(400).send(err);
+      res.status(200).json({
+        price: price,
+        rideid: temps._id,
+      });
+    });
   });
 });
 
@@ -298,8 +304,7 @@ app.post("/api/driver/rides/:rideid", driverauth.auth, function (req, res) {
         res.sendStatus(200);
       }
     );
-  }
-  else{
+  } else {
     res.send("denied");
   }
 });
@@ -307,66 +312,63 @@ app.post("/api/driver/rides/:rideid", driverauth.auth, function (req, res) {
 app.post("/api/rider/history", riderauth.auth, function (req, res) {
   //const rideremail = req.body.email;
 
-  var email = '';
+  var email = "";
 
   //const query = { rider_email: rideremail ,status:'completed'};
 
-  let token =req.cookies.auth;
-  Rider.findByToken(token,(err,rider)=>{
-    if(err) throw err;
-    if(!rider) return res.json({
-        error :true
-    });
+  let token = req.cookies.auth;
+  Rider.findByToken(token, (err, rider) => {
+    if (err) throw err;
+    if (!rider)
+      return res.json({
+        error: true,
+      });
 
     email = rider.email;
-    const query = { rider_email: email ,status:'completed'};
-console.log('-------'+email);
-  Trips.find(query, function (err, result) {
-    if (err) return res.status(400).send(err);
-    res.send(result);
+    const query = { rider_email: email, status: "completed" };
+    console.log("-------" + email);
+    Trips.find(query, function (err, result) {
+      if (err) return res.status(400).send(err);
+      res.send(result);
+    });
   });
-
-});
 });
 
 app.get("/api/rider/status/:rideid", riderauth.auth, function (req, res) {
-    const ride_id = req.params["rideid"];
-  
-    const query = { _id: ride_id};
-  
-    Trips.find(query, function (err, result) {
-      if (err) return res.status(400).send(err);
-      console.log(result);
-      console.log(result[0].status);
-      res.send(result[0].status);
-    });
+  const ride_id = req.params["rideid"];
+
+  const query = { _id: ride_id };
+
+  Trips.find(query, function (err, result) {
+    if (err) return res.status(400).send(err);
+    console.log(result);
+    console.log(result[0].status);
+    res.send(result[0].status);
   });
-
-app.get("/api/rider/nearbycabs",riderauth.auth,function(req,res){
-    CabCategory.find(function(err,result){
-
-        if (err) return res.status(400).send(err);
-        console.log(result);
-        res.status(200).send(result);
-
-    });
-
 });
 
-app.post("/api/category",function(req,res){
-    const name = req.body.name;
-    const basefare = req.body.basefare;
-    const perkmprice = req.body.perkmprice;
-    const newCategory = {
-        name:name,
-        basefare: basefare,
-        perkmprice :perkmprice
-    }
-    CabCategory.create(newCategory, function (err, temps) {
-        if (err) return res.status(400).send(err);
-        res.sendStatus(200);
-      });
-})
+app.get("/api/rider/nearbycabs", riderauth.auth, function (req, res) {
+  CabCategory.find(function (err, result) {
+    if (err) return res.status(400).send(err);
+    console.log(result);
+    res.status(200).send(result);
+  });
+});
+
+app.post("/api/category", function (req, res) {
+  const name = req.body.name;
+  const basefare = req.body.basefare;
+  const perkmprice = req.body.perkmprice;
+  const newCategory = {
+    name: name,
+    basefare: basefare,
+    perkmprice: perkmprice,
+  };
+  CabCategory.create(newCategory, function (err, temps) {
+    if (err) return res.status(400).send(err);
+    res.sendStatus(200);
+  });
+});
 
 app.listen(2000, () => {
   console.log("server is running");
